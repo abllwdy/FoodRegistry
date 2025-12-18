@@ -1,5 +1,9 @@
 package com.foodregistry;
 
+import com.foodregistry.security.AuditLog;
+import com.foodregistry.security.AuthenticationService;
+import com.foodregistry.security.Permission;
+import com.foodregistry.security.UnauthorizedException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,6 +14,8 @@ public class Restaurant implements IRestaurant {
     private List<Order> orderHistory;
     private int customerCount;
     private Receipt receiptPrinter;
+    private AuthenticationService authService;
+    private AuditLog auditLog;
 
     public Restaurant() {
         menu = new ArrayList<>();
@@ -24,10 +30,25 @@ public class Restaurant implements IRestaurant {
         orderHistory = new ArrayList<>();
         customerCount = 0;
         receiptPrinter = new Receipt();
+        authService = new AuthenticationService();
+        auditLog = new AuditLog();
     }
 
     @Override
-    public void processItemCode(char code, int quantity) {
+    public AuthenticationService getAuthService() {
+        return authService;
+    }
+
+    @Override
+    public AuditLog getAuditLog() {
+        return auditLog;
+    }
+
+    @Override
+    public void processItemCode(char code, int quantity) throws UnauthorizedException {
+        if (!authService.hasPermission(Permission.PROCESS_ORDER)) {
+            throw new UnauthorizedException("Access Denied: PROCESS_ORDER requires CASHIER or MANAGER privileges");
+        }
         int index = findMenuItemByCode(code);
         if (index != -1) {
             currentOrder.addItem(index, quantity);
@@ -45,7 +66,11 @@ public class Restaurant implements IRestaurant {
     }
 
     @Override
-    public String processPayment(float amount) {
+    public String processPayment(float amount) throws UnauthorizedException {
+        if (!authService.hasPermission(Permission.PROCESS_ORDER)) {
+            throw new UnauthorizedException("Access Denied: PROCESS_ORDER requires CASHIER or MANAGER privileges");
+        }
+
         if (amount < currentOrder.getTotal()) {
             return "Insufficient payment! Need RM " + String.format("%.2f", currentOrder.getTotal());
         }
@@ -62,9 +87,60 @@ public class Restaurant implements IRestaurant {
         }
         dailySales.calculateTotals(menu);
 
+        auditLog.record(authService.getCurrentUser(), 
+            String.format("Processed Order #%d - RM %.2f", customerCount, currentOrder.getTotal()));
+
         String receipt = generateReceiptString(amount);
         currentOrder.clear();
         return receipt;
+    }
+
+    @Override
+    public void modifyMenuPrice(char code, float newPrice) throws UnauthorizedException {
+        if (!authService.hasPermission(Permission.MODIFY_MENU)) {
+            throw new UnauthorizedException("Access Denied: MODIFY_MENU requires MANAGER privileges");
+        }
+        int index = findMenuItemByCode(code);
+        if (index != -1) {
+            float oldPrice = menu.get(index).getPrice();
+            menu.get(index).setPrice(newPrice);
+            auditLog.record(authService.getCurrentUser(), 
+                String.format("Modified Menu Item %c: RM %.2f -> RM %.2f", code, oldPrice, newPrice));
+        }
+    }
+
+    @Override
+    public String processRefund(int orderNumber) throws UnauthorizedException {
+        if (!authService.hasPermission(Permission.PROCESS_REFUND)) {
+            throw new UnauthorizedException("Access Denied: PROCESS_REFUND requires MANAGER privileges");
+        }
+        
+        // Adjust index (1-based to 0-based)
+        int index = orderNumber - 1;
+        if (index < 0 || index >= orderHistory.size()) {
+            return "Order not found.";
+        }
+        
+        Order targetOrder = orderHistory.get(index);
+        
+        // Reverse sales from daily sales
+        for (int i = 0; i < menu.size(); i++) {
+            dailySales.addItem(i, -targetOrder.getQuantity(i)); // Subtract quantities
+        }
+        dailySales.calculateTotals(menu);
+        
+        // Remove from history? Or just keep it?
+        // To keep history integrity, we might want to just mark it or leave it but the requirement is simple.
+        // I'll remove it from the list to reflect "Refunded" status in report simply.
+        orderHistory.remove(index);
+        
+        // Re-adjust customerCount? No, that messes up receipt numbers.
+        // We just remove it from history and daily sales.
+        
+        auditLog.record(authService.getCurrentUser(), 
+            String.format("Refunded Order #%d - RM %.2f", orderNumber, targetOrder.getTotal()));
+            
+        return "Refund processed for Order #" + orderNumber;
     }
 
     private String generateReceiptString(float amountPaid) {
@@ -99,7 +175,11 @@ public class Restaurant implements IRestaurant {
     }
 
     @Override
-    public String generateDailyReport() {
+    public String generateDailyReport() throws UnauthorizedException {
+        if (!authService.hasPermission(Permission.VIEW_DAILY_REPORT)) {
+            throw new UnauthorizedException("Access Denied: VIEW_DAILY_REPORT requires privileges");
+        }
+        
         StringBuilder sb = new StringBuilder();
         sb.append("<h3>DAILY MEAL SALES REPORT</h3>");
         sb.append("<div class='report'>");
