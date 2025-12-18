@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H & S Restaurant</title>
+    <link rel="stylesheet" href="style.css">
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if placeholders are still present (meaning server didn't process them)
+            // We split the strings to avoid detecting this script itself
+            if (document.body.innerHTML.includes('{{' + 'MENU}}') || window.location.protocol === 'file:') {
+                document.body.innerHTML = `
+                    <div style="
+                        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                        background: rgba(0,0,0,0.9); color: white;
+                        display: flex; flex-direction: column;
+                        align-items: center; justify-content: center;
+                        font-family: sans-serif; text-align: center; z-index: 9999;
+                    ">
+                        <h1 style="color: #ff6b6b; font-size: 3em; margin-bottom: 20px;">⚠️ Application Not Running Correctly</h1>
+                        <p style="font-size: 1.5em; max-width: 600px; line-height: 1.5;">
+                            It looks like you opened the file directly or the server isn't running.
+                            <br><br>
+                            The Java backend is required to process the menu.
+                        </p>
+                        <div style="margin-top: 30px; padding: 20px; background: #333; border-radius: 10px;">
+                            <p style="margin-bottom: 10px; color: #aaa;">Please access the app via:</p>
+                            <a href="http://localhost:8000" style="
+                                color: #4ecdc4; font-size: 1.5em; font-weight: bold;
+                                text-decoration: underline;
+                            ">http://localhost:8000</a>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        function updateQty(btn, change) {
+            const wrapper = btn.closest('.qty-wrapper');
+            const input = wrapper.querySelector('.qty-input');
+            let val = parseInt(input.value);
+            val += change;
+            if (val < 0) val = 0; // Allow 0, but usually we want to add at least 1. Let's start at 0 as per image
+            input.value = val;
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍽️ H & S Restaurant</h1>
+            <p>Meal Billing System</p>
+        </header>
+
+        <main>
+            <div class="panel menu-panel">
+                <h2>📋 Menu</h2>
+                {{MENU}}
+            </div>
+
+            <div class="panel order-panel">
+                <h2>🛒 Current Order</h2>
+                {{ORDER}}
+                
+                <div class="controls">
+                    <form action="/action" method="post" class="action-form">
+                        <input type="hidden" name="action" value="clear">
+                        <button type="submit" class="btn btn-clear">Clear Order</button>
+                    </form>
+                </div>
+                
+                <div class="checkout-box">
+                    <h3>Checkout</h3>
+                    <form action="/action" method="post">
+                        <input type="hidden" name="action" value="checkout">
+                        <label>Payment (RM): <input type="number" step="0.01" name="amount" required></label>
+                        <button type="submit" class="btn btn-checkout">Pay & Print Receipt</button>
+                    </form>
+                </div>
+
+                <div class="system-box">
+                    <form action="/action" method="post">
+                        <input type="hidden" name="action" value="report">
+                        <button type="submit" class="btn btn-report">End Session / Report</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+
+        <div class="message-area">
+            {{MESSAGE}}
+        </div>
+    </div>
+</body>
+</html>
