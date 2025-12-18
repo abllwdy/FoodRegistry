@@ -4,6 +4,8 @@ import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.io.*;
+import java.util.Scanner;
 
 /**
  * Handles user authentication and permission checking.
@@ -11,14 +13,61 @@ import java.util.Map;
 public class AuthenticationService {
     private Map<String, User> users;
     private User currentUser;
+    private static final String USERS_FILE = "users.txt";
 
     public AuthenticationService() {
         users = new HashMap<>();
-        // Add default users
+        loadUsers();
+    }
+
+    private void loadUsers() {
+        File file = new File(USERS_FILE);
+        if (!file.exists()) {
+            createDefaultUsers();
+            return;
+        }
+
+        try (Scanner scanner = new Scanner(file)) {
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                String[] parts = line.split(",");
+                if (parts.length == 4) {
+                    String username = parts[0];
+                    String passwordHash = parts[1];
+                    try {
+                        Role role = Role.valueOf(parts[2]);
+                        String employeeId = parts[3];
+                        users.put(username, new User(username, passwordHash, role, employeeId));
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Invalid role for user " + username);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            createDefaultUsers();
+        }
+    }
+
+    private void createDefaultUsers() {
         // cashier01 / cash123
         addUser("cashier01", hashPassword("cash123"), Role.CASHIER, "EMP001");
         // manager01 / mgr123
         addUser("manager01", hashPassword("mgr123"), Role.MANAGER, "MGR001");
+        saveUsers();
+    }
+
+    private void saveUsers() {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(USERS_FILE))) {
+            for (User user : users.values()) {
+                writer.println(user.getUsername() + "," + 
+                             user.getPasswordHash() + "," + 
+                             user.getRole() + "," + 
+                             user.getEmployeeId());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void addUser(String username, String passwordHash, Role role, String employeeId) {

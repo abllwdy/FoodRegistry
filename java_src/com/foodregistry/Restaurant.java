@@ -6,6 +6,8 @@ import com.foodregistry.security.Permission;
 import com.foodregistry.security.UnauthorizedException;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.*;
+import java.util.Scanner;
 
 public class Restaurant implements IRestaurant {
     private List<MenuItem> menu;
@@ -16,14 +18,11 @@ public class Restaurant implements IRestaurant {
     private Receipt receiptPrinter;
     private AuthenticationService authService;
     private AuditLog auditLog;
+    private static final String MENU_FILE = "menu.txt";
 
     public Restaurant() {
         menu = new ArrayList<>();
-        menu.add(new MenuItem('N', "Nasi Lemak", 9.00f));
-        menu.add(new MenuItem('C', "Chicken Rice", 8.00f));
-        menu.add(new MenuItem('M', "Masala Dosa", 6.00f));
-        menu.add(new MenuItem('H', "Hamburger", 5.00f));
-        menu.add(new MenuItem('F', "Fish and Chips", 12.00f));
+        loadMenu();
 
         currentOrder = new Order(menu.size());
         dailySales = new Order(menu.size());
@@ -32,6 +31,49 @@ public class Restaurant implements IRestaurant {
         receiptPrinter = new Receipt();
         authService = new AuthenticationService();
         auditLog = new AuditLog();
+    }
+
+    private void loadMenu() {
+        File file = new File(MENU_FILE);
+        if (!file.exists()) {
+            createDefaultMenu();
+            return;
+        }
+
+        try (Scanner scanner = new Scanner(file)) {
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                String[] parts = line.split(",");
+                if (parts.length == 3) {
+                    char code = parts[0].charAt(0);
+                    String name = parts[1];
+                    float price = Float.parseFloat(parts[2]);
+                    menu.add(new MenuItem(code, name, price));
+                }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            createDefaultMenu();
+        }
+    }
+
+    private void createDefaultMenu() {
+        menu.add(new MenuItem('N', "Nasi Lemak", 9.00f));
+        menu.add(new MenuItem('C', "Chicken Rice", 8.00f));
+        menu.add(new MenuItem('M', "Masala Dosa", 6.00f));
+        menu.add(new MenuItem('H', "Hamburger", 5.00f));
+        menu.add(new MenuItem('F', "Fish and Chips", 12.00f));
+        saveMenu();
+    }
+
+    public void saveMenu() {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(MENU_FILE))) {
+            for (MenuItem item : menu) {
+                writer.println(item.getCode() + "," + item.getName() + "," + item.getPrice());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -104,6 +146,7 @@ public class Restaurant implements IRestaurant {
         if (index != -1) {
             float oldPrice = menu.get(index).getPrice();
             menu.get(index).setPrice(newPrice);
+            saveMenu();
             auditLog.record(authService.getCurrentUser(), 
                 String.format("Modified Menu Item %c: RM %.2f -> RM %.2f", code, oldPrice, newPrice));
         }

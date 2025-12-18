@@ -37,33 +37,13 @@ public class Main {
     }
 
     private static String getLoginPage() {
-        return "<!DOCTYPE html>\n" +
-               "<html>\n" +
-               "<head>\n" +
-               "    <title>Login - H & S Restaurant</title>\n" +
-               "    <link rel=\"stylesheet\" href=\"style.css\">\n" +
-               "    <style>\n" +
-               "        body { display: flex; justify-content: center; align-items: center; height: 100vh; background: #2c3e50; margin: 0; }\n" +
-               "        .login-box { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: center; width: 300px; }\n" +
-               "        input { display: block; width: 100%; margin: 15px 0; padding: 12px; font-size: 1.1em; box-sizing: border-box; border: 1px solid #ddd; border-radius: 5px; }\n" +
-               "        button { background: #e74c3c; color: white; padding: 12px; border: none; font-size: 1.2em; cursor: pointer; border-radius: 5px; width: 100%; transition: background 0.3s; }\n" +
-               "        button:hover { background: #c0392b; }\n" +
-               "        h1 { margin-top: 0; color: #333; }\n" +
-               "    </style>\n" +
-               "</head>\n" +
-               "<body>\n" +
-               "    <div class=\"login-box\">\n" +
-               "        <h1>🔐 Login</h1>\n" +
-               "        <form action=\"/action\" method=\"post\">\n" +
-               "            <input type=\"hidden\" name=\"action\" value=\"login\">\n" +
-               "            <input type=\"text\" name=\"username\" placeholder=\"Username\" required>\n" +
-               "            <input type=\"password\" name=\"password\" placeholder=\"Password\" required>\n" +
-               "            <button type=\"submit\">Sign In</button>\n" +
-               "        </form>\n" +
-               "        <p style=\"color: #e74c3c; margin-top: 15px;\">" + loginMessage + "</p>\n" +
-               "    </div>\n" +
-               "</body>\n" +
-               "</html>";
+        try {
+            String content = Files.readString(Paths.get("login.html"), StandardCharsets.UTF_8);
+            return content.replace("{{LOGIN_MESSAGE}}", loginMessage);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "Error loading login page";
+        }
     }
 
     static class StyleHandler implements HttpHandler {

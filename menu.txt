@@ -1,0 +1,5 @@
+N,Nasi Lemak,9.0
+C,Chicken Rice,8.0
+M,Masala Dosa,6.0
+H,Hamburger,5.0
+F,Fish and Chips,12.0
