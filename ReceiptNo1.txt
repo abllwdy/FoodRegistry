@@ -1,0 +1,17 @@
+= * === * === * === * === * ==
+H & S Restaurant Meal Billing System
+= * === * === * === * === * ==
+
+Order: #1
+
+Items in bill:
+(F) [RM 12.00] Fish and Chips × 1 = RM 12.00
+====================================
+ Subtotal: RM 12.00
+ SST charge 10%: RM 1.20
+ Grand total: RM 13.20
+====================================
+Amount received: RM 50.00
+ Change given: RM 36.80
+====================================
+Thank you and have a nice day ahead!

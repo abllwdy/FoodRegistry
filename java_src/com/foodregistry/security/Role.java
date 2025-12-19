@@ -7,7 +7,7 @@ import java.util.Set;
  * Defines the user roles and their associated permissions.
  */
 public enum Role {
-    CASHIER(EnumSet.of(Permission.PROCESS_ORDER, Permission.VIEW_DAILY_REPORT)),
+    CASHIER(EnumSet.of(Permission.PROCESS_ORDER)),
     
     MANAGER(EnumSet.allOf(Permission.class));
 
