@@ -26,6 +26,12 @@ public class RealSystemTests {
             // 3. Core Logic & Calculations
             testCoreLogicAndCalculations();
 
+            // 4. Negative Quantity Handling
+            testOrderNegativeQuantity();
+
+            // 5. Order Clearing
+            testOrderClearing();
+
 
         } catch (Exception e) {
             System.out.println("CRITICAL ERROR IN TEST SUITE: " + e.getMessage());
@@ -68,7 +74,7 @@ public class RealSystemTests {
         logResult("TC-AUTH01", "Valid Cashier Login", roleCorrect, "Failed to login as cashier01");
 
 
-        // TC-AUTH03: Invalid Login Attempt
+        // TC-AUTH02: Invalid Login Attempt
         auth.logout();
         loginSuccess = auth.login("cashier01", "wrongpass");
         logResult("TC-AUTH02", "Invalid Login Attempt", !loginSuccess, "Invalid credentials were accepted");
@@ -79,7 +85,7 @@ public class RealSystemTests {
         Restaurant res = new Restaurant();
         String menuHtml = res.getMenuDisplay();
 
-        // TC-UI01: Verify Full Menu (Simple check for all 5 known items)
+        // TC-OR01: Verify Full Menu (Simple check for all 5 known items)
         boolean hasAll = menuHtml.contains("Nasi Lemak") && 
                          menuHtml.contains("Chicken Rice") && 
                          menuHtml.contains("Masala Dosa") && 
@@ -93,7 +99,7 @@ public class RealSystemTests {
         Restaurant res = new Restaurant();
         res.getAuthService().login("cashier01", "cash123"); // Login required for processing
 
-        // TC-OR01: Single Item Calculation (2 x Nasi Lemak)
+        // TC-OR02: Single Item Calculation (2 x Nasi Lemak)
         res.clearOrder();
         res.processItemCode('N', 2); // 9.00 * 2 = 18.00
         String orderDisplay = res.getCurrentOrderDisplay();
@@ -109,7 +115,7 @@ public class RealSystemTests {
                  subtotalCorrect && totalCorrect, 
                  "Calculations incorrect. Expected 18.00/19.80 in: " + orderDisplay);
 
-        // TC-OR02: Mixed Order Calculation (1 Fish + 1 Burger)
+        // TC-OR03: Mixed Order Calculation (1 Fish + 1 Burger)
         res.clearOrder();
         res.processItemCode('F', 1); // 12.00
         res.processItemCode('H', 1); // 5.00
@@ -128,10 +134,16 @@ public class RealSystemTests {
         logResult("TC-OR03", "Mixed Order Calculation (Fish + Burger)", 
                  fishCorrect && burgerCorrect && totalCorrect, 
                  "Calculations incorrect. Expected 18.70 Total");
+    }
 
-        // TC-OR03: Negative Quantity Handling
+    private static void testOrderNegativeQuantity() {
+        System.out.println("\n--- 4. Negative Quantity Handling ---");
+        Restaurant res = new Restaurant();
+        res.getAuthService().login("cashier01", "cash123");
+
+        // TC-OR04: Negative Quantity Handling
         // We expect it NOT to change the total or add negative items
-        // Current total is 18.70
+        // Current total is 18.70 from previous test if we shared state, but we are new instance.
         try {
              // Depending on implementation, this might throw or just ignore
              // The Restaurant.processItemCode calls Order.addItem
@@ -147,20 +159,27 @@ public class RealSystemTests {
              // But purely backend:
              // Let's assume the requirement "System should reject...".
              // If it doesn't throw, check if total is still valid (>= 0).
-             orderDisplay = res.getCurrentOrderDisplay();
+             String orderDisplay = res.getCurrentOrderDisplay();
              // Just pass if it didn't crash and total is sane.
              logResult("TC-OR04", "Negative Quantity Handling", true, "System handled negative input without crash");
         } catch (Exception e) {
              logResult("TC-OR04", "Negative Quantity Handling", true, "System rejected negative input (Exception)");
         }
+    }
 
-        // TC-OR04: Order Clearing
+    private static void testOrderClearing() throws Exception {
+        System.out.println("\n--- 5. Order Clearing ---");
+        Restaurant res = new Restaurant();
+        res.getAuthService().login("cashier01", "cash123");
+        
+        // Add item to ensure we have something to clear
+        res.processItemCode('N', 1);
+
+        // TC-OR05: Order Clearing
         res.clearOrder();
-        orderDisplay = res.getCurrentOrderDisplay();
+        String orderDisplay = res.getCurrentOrderDisplay();
         boolean isCleared = orderDisplay.contains("Nothing.");
         // Adjust based on actual empty message in Restaurant.java: "<p>Nothing.</p>"
         logResult("TC-OR05", "Order Clearing", isCleared, "Cart did not display empty message ('Nothing.')");
     }
-
-
 }
